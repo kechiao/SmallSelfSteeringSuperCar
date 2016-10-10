@@ -1,13 +1,13 @@
 # Name:         self_control_train.py
 # Description:  Allows user to collect training images for training of the 
-#				neural network used to autonomously drive.
+#               neural network used to autonomously drive.
 # Instructions: First make sure Raspberry Pi is turned on and is running 
 #               'stream_image_client.py'. Use arrow keys to maneuver the 
-#				car and images will be saved along with direction.
-# References:	Most of the PyGame control and server information is taken
-# 				directly from https://github.com/bskari/pi-rc/blob/master/interactive_control.py
-# Notes:		I have made modifications to the code obtained from above in order
-#				to streamline the training process.
+#               car and images will be saved along with direction.
+# References:   Most of the PyGame control and server information is taken
+#               directly from https://github.com/bskari/pi-rc/blob/master/interactive_control.py
+# Notes:        I have made modifications to the code obtained from above in order
+#               to streamline the training process.
 
 import pygame
 import pygame.font
@@ -15,10 +15,13 @@ import numpy as np
 import socket
 import argparse
 import json
+import cStringIO
+import io
 
 from pygame.locals import *
 from common import dead_frequency
 from common import server_up
+from PIL import Image
 
 
 UP = LEFT = DOWN = RIGHT = False
@@ -88,6 +91,8 @@ def get_keys():
         if event.type == pygame.QUIT:
             global QUIT
             QUIT = True
+            global send_inst
+            send_inst = False
         elif event.type in {pygame.KEYDOWN, pygame.KEYUP}:
             down = (event.type == pygame.KEYDOWN)
             change = (event.key in key_to_global_name)
@@ -100,73 +105,160 @@ def get_keys():
 # Name: 	   interactive_control(host, port, configuration)
 # Description: Runs the interactive control.
 def interactive_control(host, port, configuration):
-    pygame.init()
-    size = (300, 400)
-    screen = pygame.display.set_mode(size)
-    # pylint: disable=too-many-function-args
-    background = pygame.Surface(screen.get_size())
-    clock = pygame.time.Clock()
-    black = (0, 0, 0)
-    white = (255, 255, 255)
-    big_font = pygame.font.Font(None, 40)
-    little_font = pygame.font.Font(None, 24)
+  # Setting up server
+  server_socket = socket.socket()
+  server_socket.bind(('192.168.1.185', 8000))
+  server_socket.listen(0)
 
-    pygame.display.set_caption('rc-pi interactive')
+  # accept Raspberry Pi connection
+  connection = server_socket.accept()[0].makefile('rb')
 
-    text = big_font.render('Use arrows to move', 1, white)
-    text_position = text.get_rect(centerx=size[0] / 2)
-    background.blit(text, text_position)
-    screen.blit(background, (0, 0))
-    pygame.display.flip()
+  # Creating labels using one hot encoding method. There are 5 commands: 
+  # up, down, left, right, idle, and therefore labels are 5 dimensional
+  # vectors. 
+  labels = np.zeros((4,4), 'float')
+  for i in range(4):
+    labels[i,i] = 1
+  # The actual assignment of keypress to label
+  temp_label = np.zeros((1,4), 'float')
 
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+  # Starting PyGame window to control RC Car
+  pygame.init()
+  size = (300, 400)
+  screen = pygame.display.set_mode(size)
+  # pylint: disable=too-many-function-args
+  background = pygame.Surface(screen.get_size())
+  clock = pygame.time.Clock()
+  black = (0, 0, 0)
+  white = (255, 255, 255)
+  big_font = pygame.font.Font(None, 40)
+  little_font = pygame.font.Font(None, 24)
 
-    while not QUIT:
-        up, down, left, right, change = get_keys()
+  pygame.display.set_caption('rc-pi interactive')
 
-        if change:
-            # Something changed, so send a new command
-            command = 'idle'
-            if up:
-                command = 'forward'
-            elif down:
-                command = 'reverse'
+  text = big_font.render('Use arrows to move', 1, white)
+  text_position = text.get_rect(centerx=size[0] / 2)
+  background.blit(text, text_position)
+  screen.blit(background, (0, 0))
+  pygame.display.flip()
 
-            append = lambda x: command + '_' + x if command != 'idle' else x
+  sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+  # Assign send_inst to True initially; stream condition
+  global send_inst
+  send_inst = True
 
-            if left:
-                command = append('left')
-            elif right:
-                command = append('right')
+  # Image is 320x120 that is reshaped into one row vector
+  image_array = np.zeros((1, 38400))
+  image_label = np.zeros((1,4), 'float')
+  saved_frame = 0
+  total_frames = 0
+  while not QUIT:
+      #up, down, left, right, change = get_keys()
+      #saved_frames = 0
+      #total_frames = 0
 
-            print(command)
-            try:
-                sock.sendto(configuration[command], (host, port))
-            except TypeError:
-                # Windows + Python 3 workaround?
-                sock.sendto(bytes(configuration[command], 'utf-8'), (host, port))
+      # Starting to collect images for training
+      print 'Collecting images...'
+      # Image is 320x120 that is reshaped into one row vector
+      #image_array = np.zeros((1, 38400))
+      #image_label = np.zeros((1,4), 'float')
 
-            # Show the command and JSON
-            background.fill(black)
-            text = big_font.render(command, 1, white)
-            text_position = text.get_rect(centerx=size[0] / 2)
-            background.blit(text, text_position)
+      # Stream the image frame by frame
+      try: 
+        stream_bytes = ' '
+        frame = 1
+        while send_inst:
+          stream_bytes += connection.read(1024)
+          # JPEG image files begin with FF D8 and end with FF D9
+          first = stream_bytes.find('\xff\xd8')
+          last = stream_bytes.find('\xff\xd9')
+          if first != -1 and last != -1:
+            jpg = stream_bytes[first:last + 2]
+            stream_bytes = stream_bytes[last + 2:]
+            #image = Image.open(cStringIO.StringIO(jpg))
+            #image = Image.open(io.BytesIO(jpg))
+            #image = np.array(image.getdata())
+            image = np.zeros((240,320))
+            # Cropping the interesting portions
+            image_crop = image[120:240, :]
 
-            pretty = json.dumps(json.loads(configuration[command]), indent=4)
-            pretty_y_position = big_font.size(command)[1] + 10
-            for line in pretty.split('\n'):
-                text = little_font.render(line, 1, white)
-                text_position = text.get_rect(x=0, y=pretty_y_position)
-                pretty_y_position += little_font.size(line)[1]
+
+            temp_array = image_crop.reshape(1, 38400).astype(np.float32)
+
+            frame += 1
+            total_frames += 1
+            up, down, left, right, change = get_keys()
+
+            if change:
+                # Something changed, so send a new command
+                command = 'idle'
+                if up:
+                    command = 'forward'
+                    saved_frame += 1
+                    image_array = np.vstack((image_array, temp_array))
+                    image_label = np.vstack((image_label, labels[2]))
+                    
+                elif down:
+                    command = 'reverse'
+                    saved_frame += 1
+                    image_array = np.vstack((image_array, temp_array))
+                    image_label = np.vstack((image_label, labels[3]))
+
+                append = lambda x: command + '_' + x if command != 'idle' else x
+
+                if left:
+                    command = append('left')
+                    saved_frame += 1
+                    image_array = np.vstack((image_array, temp_array))
+                    image_label = np.vstack((image_label, labels[0]))
+                elif right:
+                    command = append('right')
+                    saved_frame += 1
+                    image_array = np.vstack((image_array, temp_array))
+                    image_label = np.vstack((image_label, labels[1]))
+
+                print(command)
+                try:
+                    sock.sendto(configuration[command], (host, port))
+                except TypeError:
+                    # Windows + Python 3 workaround?
+                    sock.sendto(bytes(configuration[command], 'utf-8'), (host, port))
+
+                # Show the command and JSON
+                background.fill(black)
+                text = big_font.render(command, 1, white)
+                text_position = text.get_rect(centerx=size[0] / 2)
                 background.blit(text, text_position)
 
-            screen.blit(background, (0, 0))
-            pygame.display.flip()
+                pretty = json.dumps(json.loads(configuration[command]), indent=4)
+                pretty_y_position = big_font.size(command)[1] + 10
+                for line in pretty.split('\n'):
+                    text = little_font.render(line, 1, white)
+                    text_position = text.get_rect(x=0, y=pretty_y_position)
+                    pretty_y_position += little_font.size(line)[1]
+                    background.blit(text, text_position)
 
-        # Limit to 20 frames per second
-        clock.tick(60)
+                screen.blit(background, (0, 0))
+                pygame.display.flip()
+            
+            # Limit to 20 frames per second
+            clock.tick(60)
 
-    pygame.quit()
+        train = image_array[1:,:]
+        training_labels = image_label[1:,:]
+        # Saving images and labels to disk
+        print 'Saving data...'
+        np.savez('test.npz', train=train, train_labels = training_labels)
+
+        print 'Total Frames:', total_frames
+        print 'Saved Frames:', saved_frame
+        print 'Dropped Frames:', total_frames - saved_frame
+
+      finally: 
+        connection.close()
+        server_socket.close()
+
+  pygame.quit()
 
 # Name: 		make_parser()
 # Description:	Builds and returns an argument parser.
@@ -207,6 +299,7 @@ def main():
     print('Sending commands to ' + args.server + ':' + str(args.port))
 
     frequency = json.loads(configuration['idle'])[0]['frequency']
+
     if not server_up(args.server, args.port, frequency):
         print('Server does not appear to be listening for messages, aborting')
         return
@@ -215,4 +308,4 @@ def main():
 
 # This is a standard boilerplate function
 if __name__ == '__main__':
-	main() # Go to main function
+    main() # Go to main function
