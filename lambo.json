@@ -1,0 +1,19 @@
+{
+    "name": "Lamborghini Veneno",
+    "description": "Amazon, Self Driving Car, 27 MHz",
+    "frequency": 26.995,
+    "synchronization_burst_us": 1200,
+    "synchronization_spacing_us": 400,
+    "total_synchronizations": 4,
+    "signal_burst_us": 400,
+    "signal_spacing_us": 400,
+
+    "forward": 16,
+    "forward_left": 33,
+    "forward_right": 27,
+    "left": 63,
+    "reverse": 39,
+    "reverse_left": 46,
+    "reverse_right": 51,
+    "right": 57
+}
