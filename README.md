@@ -27,8 +27,8 @@ If you would like to view the details behind this project, feel free to click on
     - [Overview](#overview)
     - [In Depth](#in-depth)
     - [Problems](#problems)
-- [Future Updates](#updates)
-- [Special Thanks](#thanks)
+- [Future Updates](#future-updates)
+- [Special Thanks](#special-thanks)
 
 ## Installation
 
