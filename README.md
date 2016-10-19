@@ -26,6 +26,7 @@ If you would like to view the details behind this project, feel free to click on
     - [Motivation](#motivation)
     - [Overview](#overview)
     - [In Depth](#in-depth)
+    - [Results](#results)
     - [Problems](#problems)
 - [Future Updates](#future-updates)
 - [Special Thanks](#special-thanks)
@@ -170,8 +171,11 @@ The way the network learns is by the method of backpropagation. You can think of
 
 Eventually the model will converge and will have finished training, hopefully with a reasonable training accuracy. The parameters are then saved locally and the next time we load from this model, we will have the weights ready to go and can accept streamed images real time and use them for prediction. 
 
+### Results
+
 With the current code, I can achieve roughly 96% validation accuracy which is pretty good. Validation accuracy is important because it allows us to infer how well the model can generalize to new situations. There are many ways to perform model validation. I use a validation split of 2.5%, where 2.5% of the shuffled training data is held out and not used to train the model. The model then attempts to predict, using the validation data, and the accuracy is reported. 
 
+There are more results located in a comment block at the bottom of ```train.py```. 
 ### Problems
 
 To be continued...
