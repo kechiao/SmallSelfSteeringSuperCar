@@ -16,7 +16,7 @@ If you would like to view the details behind this project, feel free to click on
     - [Files](#files)
 - [Setting up Pi-rc](#pi-rc)
 - [Setting up local computer](#local-computer)
-    - [Capturing Data](#data)
+    - [Capturing Data](#capturing-data)
     - [Training](#training)
     - [Testing](#testing)
 - [Details](#details)
