@@ -27,7 +27,6 @@ If you would like to view the details behind this project, feel free to click on
     - [Overview](#overview)
     - [In Depth](#in-depth)
     - [Problems](#problems)
-- [License](#license)
 - [Future Updates](#updates)
 - [Special Thanks](#thanks)
 
@@ -167,7 +166,26 @@ Here is an example of what our network looks like. I used a 3 layer feed forward
 
 [![neural](https://docs.google.com/drawings/d/1QZwp3L4NPYOlnlLubwiXchQCTk4TGUhHqQCw6H5JK6k/pub?w=819&h=452)](https://docs.google.com/drawings/d/1QZwp3L4NPYOlnlLubwiXchQCTk4TGUhHqQCw6H5JK6k/pub?w=819&h=452)
 
-The way the network learns is by the method of backpropagation. You can think of it like this: you have a bunch of people with knobs and valves that control how influencial a certain node is. Image data is input into the input layer one by one, and the people begin furiously turning knobs (weights of the nodes), trying to achieve the desired output at the output layer. Once the last person gives their output, this is known as the forward pass. Now, we need to backpropagate the errors. The last layer, and consequently each person (node) will get feedback based on how well they did and how much they need to be punished (this is determined by the loss function, which tells you how "off" you were from your desired target.) They report this feedback, also known as the gradient, recursively backwards until it goes to the front, where another forward pass will then commence, this time with updated information for knob turning (weights). 
+The way the network learns is by the method of backpropagation. You can think of it like this: you have a bunch of people with knobs and valves that control how influencial a certain node is. Image data is input into the input layer one by one, and the people begin furiously turning knobs (weights of the nodes), trying to achieve the desired output at the output layer. Once the last person gives their output, this is known as the forward pass. Now, we need to backpropagate the errors. The last layer will get feedback based on how well they did and how much they need to be punished (this is determined by the loss function, which tells you how "off" you were from your desired target.) They report this feedback, also known as the gradient, recursively backwards until it goes to the front, where another forward pass will then commence, this time with updated information for knob turning (weights). This continues until differences in weight updates are miniscule (I've used 1e-3 in the past but this can be changed.)
 
-A forward and backwards pass is known as an *iteration*, and once many iterations have passed until the network sees all of the data *once* this is known as an *epoch*. The number of epochs to choose is a *hyperparameter*, which is a really excited parameter. Just kidding; a hyperparameter is a variable set before actually optimizing the model's parameters. These are difficult to optimize, and contain a substantial number of choices to be made, so common methods to search the space of best hyperparameters involve using *grid search*, in which you try every single hyperparameter setting over a specified range of values, *random search*, which randomly samples the hyperparameter space, and, but not limited to, *coordinate descent*, in which one hyperparameter is held fixed except for one, and we adjust that to minimize the error.
+Eventually the model will converge and will have finished training, hopefully with a reasonable training accuracy. The parameters are then saved locally and the next time we load from this model, we will have the weights ready to go and can accept streamed images real time and use them for prediction. 
 
+With the current code, I can achieve roughly 96% validation accuracy which is pretty good. Validation accuracy is important because it allows us to infer how well the model can generalize to new situations. There are many ways to perform model validation. I use a validation split of 2.5%, where 2.5% of the shuffled training data is held out and not used to train the model. The model then attempts to predict, using the validation data, and the accuracy is reported. 
+
+### Problems
+
+To be continued...
+
+### Future Updates
+
+In the future I hopefully plan to implement the following things:
+* Proper working thresholding
+  - driving on the blue tape track
+* Changes in motor speed
+  - can drive in complex track layouts
+* Object detection
+  - recognize stop signs and traffic lights
+
+### Special Thanks
+
+Special thanks to [Multunus](http://www.multunus.com/?utm_source=github) for the project idea and implmentation help. Check out their self driving car [here](https://github.com/multunus/autonomous-rc-car). Also thanks to Zheng Wang and his version of the car as well. Details can be found at his [wordpress](https://zhengludwig.wordpress.com/projects/self-driving-rc-car/). 
