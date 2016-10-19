@@ -2,12 +2,12 @@
 # Description:  Allows user to collect training images for training of the 
 #               neural network used to autonomously drive.
 # Instructions: First make sure Raspberry Pi is turned on and is running 
-#               'stream_image_client.py'. Use arrow keys to maneuver the 
-#               car and images will be saved along with direction.
+#               'stream_image_client.py' and 'pi_pcm'. Use arrow keys to maneuver the
+#               car and images will be saved to current directory along with direction.
 # References:   Most of the PyGame control and server information is taken
 #               directly from https://github.com/bskari/pi-rc/blob/master/interactive_control.py
 # Notes:        I have made modifications to the code obtained from above in order
-#               to streamline the training process.
+#               to streamline the training process to work with pi-rc and Keras.
 
 import pygame
 import pygame.font
@@ -30,7 +30,8 @@ from scipy import ndimage
 UP = LEFT = DOWN = RIGHT = False
 QUIT = False
 ImageFile.LOAD_TRUNCATED_IMAGES = True
-# Name:		   load_configuration(configuration_file)
+
+# Name:        load_configuration(configuration_file)
 # Description: Generates a dict of JSON command messages for each movement.
 def load_configuration(configuration_file):
     configuration = json.loads(configuration_file.read())
@@ -48,7 +49,6 @@ def load_configuration(configuration_file):
         'burst_us': configuration['signal_burst_us'],
         'spacing_us': configuration['signal_spacing_us'],
     }
-
     movement_to_command = {}
     for key in (
         'forward',
@@ -77,9 +77,9 @@ def load_configuration(configuration_file):
 
     return direct_commands
 
-# Name: 	   get_keys()
+# Name:        get_keys()
 # Description: Returns a tuple of (UP, DOWN, LEFT, RIGHT, changed) representing which
-#    		   keys are UP or DOWN and whether or not the key states changed.
+#              keys are UP or DOWN and whether or not the key states changed.
 def get_keys():
     change = False
     key_to_global_name = {
@@ -105,27 +105,29 @@ def get_keys():
 
     return (UP, DOWN, LEFT, RIGHT, change)
 
-# Name: 	   interactive_control(host, port, configuration)
+# Name:        interactive_control(host, port, configuration)
 # Description: Runs the interactive control.
 def interactive_control(host, port, configuration):
   # Setting up server
   server_socket = socket.socket()
   server_socket.bind(('192.168.1.186', 8000))
   server_socket.listen(0)
-
+  
   # accept Raspberry Pi connection
   connection = server_socket.accept()[0].makefile('rb')
-
+  
   # Creating labels using one hot encoding method. There are 4 commands: 
   # up, down, left, right, and therefore labels are 4 dimensional
-  # vectors. 
+  # vectors. E.g. [1 0 0 0] is label for 'Left'
   labels = np.zeros((4,4), 'float')
   for i in range(4):
     labels[i,i] = 1
+  
   # The actual assignment of keypress to label
   temp_label = np.zeros((1,4), 'float')
 
   # Starting PyGame window to control RC Car
+  # Making it look pretty :-)
   pygame.init()
   size = (300, 400)
   screen = pygame.display.set_mode(size)
@@ -136,9 +138,7 @@ def interactive_control(host, port, configuration):
   white = (255, 255, 255)
   big_font = pygame.font.Font(None, 40)
   little_font = pygame.font.Font(None, 24)
-
   pygame.display.set_caption('rc-pi interactive')
-
   text = big_font.render('Use arrows to move', 1, white)
   text_position = text.get_rect(centerx=size[0] / 2)
   background.blit(text, text_position)
@@ -146,25 +146,25 @@ def interactive_control(host, port, configuration):
   pygame.display.flip()
 
   sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+  
   # Assign send_inst to True initially; stream condition
   global send_inst
   send_inst = True
 
   # Image is 320x120 that is reshaped into one row vector
+  # These are just empty containers so we can concatenate the images
+  # that we are using later.
   image_array = np.zeros((1, 38400))
   image_label = np.zeros((1,4), 'float')
   saved_frame = 0
   total_frames = 0
-  while not QUIT:
-      #up, down, left, right, change = get_keys()
-      #saved_frames = 0
-      #total_frames = 0
 
+  while not QUIT:
       # Starting to collect images for training
       print 'Collecting images...'
       # Image is 320x120 that is reshaped into one row vector
-      #image_array = np.zeros((1, 38400))
-      #image_label = np.zeros((1,4), 'float')
+      # image_array = np.zeros((1, 38400))
+      # image_label = np.zeros((1,4), 'float')
 
       # Stream the image frame by frame
       try: 
@@ -178,12 +178,20 @@ def interactive_control(host, port, configuration):
           if first != -1 and last != -1:
             jpg = stream_bytes[first:last + 2]
             stream_bytes = stream_bytes[last + 2:]
+            # I use cStringIO to read the bytes wired in and use PIL to import this
+            # imformation into a jpg picture. 
             image = Image.open(cStringIO.StringIO(jpg))
+            # Convert the jpg image to greyscale
             image = image.convert(mode='L')
+            # Convert the jpg to numpy operable format 
             image = np.array(np.asarray(image))
             image_crop = image[120:240,:]
-            #image = image[120:240, :, :]
             
+            # This thresholding algorithm works but not at our implemenentation stage. So,
+            # I am using just simple greyscaling. The below threshold attempts to segment the 
+            # the color blue from any other colors.
+
+            # image = image[120:240, :, :]
             # R = [(30,60),(30,60),(90,140)]
             # red_range = np.logical_and(R[0][0] < image[:,:,0], image[:,:,0] < R[0][1])
             # green_range = np.logical_and(R[1][0] < image[:,:,0], image[:,:,0] < R[1][1])
@@ -192,20 +200,25 @@ def interactive_control(host, port, configuration):
             # image.flags.writeable = True
             # image[valid_range] = 200
             # image[np.logical_not(valid_range)] = 0
-            
             # image_crop = image[:,:,2]
+
             temp_array = image_crop.reshape(1, 38400).astype(np.float32)
 
             frame += 1
             total_frames += 1
+
+            # After
             up, down, left, right, change = get_keys()
 
             if change:
                 # Something changed, so send a new command
                 command = 'idle'
+                
                 if up:
                     command = 'forward'
                     saved_frame += 1
+                    # Vertically concatenate this flattened image into the container made 
+                    # earlier. Do the same to the label. 
                     image_array = np.vstack((image_array, temp_array))
                     image_label = np.vstack((image_label, labels[2]))
                     
@@ -255,8 +268,10 @@ def interactive_control(host, port, configuration):
             # Limit to 20 frames per second
             clock.tick(60)
 
+        # Since both containers' first entry are zeros, don't use that. 
         train = image_array[1:,:]
         training_labels = image_label[1:,:]
+
         # Saving images and labels to disk
         print 'Saving data...'
         np.savez('test.npz', train=train, train_labels = training_labels)
@@ -271,8 +286,8 @@ def interactive_control(host, port, configuration):
 
   pygame.quit()
 
-# Name: 		make_parser()
-# Description:	Builds and returns an argument parser.
+# Name:         make_parser()
+# Description:  Builds and returns an argument parser.
 def make_parser():
     parser = argparse.ArgumentParser(
         description='Interactive controller for the Raspberry Pi RC.'
@@ -298,7 +313,7 @@ def make_parser():
     )
     return parser
 
-# Name: 		main()
+# Name:         main()
 # Description:  Main function used to start the collection of training images.
 def main():
     parser = make_parser()

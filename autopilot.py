@@ -1,3 +1,13 @@
+# Name:         autopilot.py
+# Description:  Autopilots the RC car using the model obtained from 'train.py'
+# Instructions: Make sure the desired model is in the current directory and run autopilot.py. Make
+#               sure that 'pi_pcm' is running on the Raspberry Pi and then run 'stream_image_client.py'
+# References:   Most of the PyGame control and server information is taken
+#               directly from https://github.com/bskari/pi-rc/blob/master/interactive_control.py
+# Notes:        I have made modifications to the code obtained from above in order
+#               to streamline the training process to work with pi-rc and Keras. 
+#               Autopy key module can be found at http://www.autopy.org/documentation/api-reference/key.html
+
 import pygame
 import pygame.font
 import numpy as np
@@ -19,7 +29,8 @@ from autopy import key
 UP = LEFT = DOWN = RIGHT = False
 QUIT = False
 ImageFile.LOAD_TRUNCATED_IMAGES = True
-# Name:      load_configuration(configuration_file)
+
+# Name:        load_configuration(configuration_file)
 # Description: Generates a dict of JSON command messages for each movement.
 def load_configuration(configuration_file):
   configuration = json.loads(configuration_file.read())
@@ -37,7 +48,6 @@ def load_configuration(configuration_file):
       'burst_us': configuration['signal_burst_us'],
       'spacing_us': configuration['signal_spacing_us'],
   }
-
   movement_to_command = {}
   for key in (
       'forward',
@@ -66,6 +76,9 @@ def load_configuration(configuration_file):
 
   return direct_commands
 
+# Name:        get_keys()
+# Description: Returns a tuple of (UP, DOWN, LEFT, RIGHT, changed) representing which
+#              keys are UP or DOWN and whether or not the key states changed.
 def get_keys():
     change = False
     key_to_global_name = {
@@ -91,7 +104,11 @@ def get_keys():
 
     return (UP, DOWN, LEFT, RIGHT, change)
 
-def interactive_control(host, port, configuration):
+# Name:        autopilot(host, port, configuration)
+# Description: Similar to interactive_control in self_control_train.py except 
+#              the car will drive itself after receiving input images from socket 
+#              socket stream. 
+def autopilot(host, port, configuration):
   # Setting up server
   server_socket = socket.socket()
   server_socket.bind(('192.168.1.186', 8000))
@@ -107,12 +124,14 @@ def interactive_control(host, port, configuration):
   labels = np.zeros((4,4), 'float')
   for i in range(4):
     labels[i,i] = 1
+  
   # The actual assignment of keypress to label
   temp_label = np.zeros((1,4), 'float')
-
-  model = load_model('autopilot.h5')
+  # Loading the Keras model to use for autopilot
+  model = load_model('96_model.h5')
 
   sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+  
   # Assign send_inst to True initially; stream condition
   global send_inst
   send_inst = True
@@ -140,33 +159,57 @@ def interactive_control(host, port, configuration):
           jpg = stream_bytes[first:last + 2]
           stream_bytes = stream_bytes[last + 2:]
           image = Image.open(cStringIO.StringIO(jpg))
+          # Image is converted to grayscale (MUST)
           image = image.convert(mode='L')
           image = np.asarray(image)
           image = np.array(np.asarray(image))
           image_crop = image[120:240,:]
           temp_array = image_crop.reshape(1, 38400).astype(np.float32)
 
-          up, down, left, right, change = get_keys()
-          prediction = model.predict(temp_array)
-          print prediction
-          predict = np.argmax(prediction)
+          #up, down, left, right, change = get_keys()
+          ##########################TO DO#########################
+          # Currently, I am using Autopy's key module to mimic keypresses in order
+          # for PyGame to grab and send to pi_pcm. However this is a little buggy
+          # and tends to spam the key presses. 
+          # 1. Fix spammy key presses
+          # 2. Add delay by using either sleep timer or average out predictions
+          # 3. so that autopilot will only provide one command every, say, 0.5 seconds.
 
+          # Predict which of the four classes (Left, Right, Up, Down) to send
+          # to the car. 
+          time.sleep(0.1)
+          predict = model.predict_classes(temp_array)
+        
           if predict == 0:
+            print 'Go left'
+            up, down, left, right, change = get_keys()
             key.toggle(long(key.K_LEFT), True)
-            time.sleep(0.10)
-            key.toggle(long(key.K_LEFT), False)
-          if predict == 1:
-            key.toggle(long(key.K_RIGHT), True)
-            time.sleep(0.10)
-            key.toggle(long(key.K_RIGHT), False)
-          if predict == 2:
             key.toggle(long(key.K_UP), True)
-            time.sleep(0.10)
+            key.toggle(long(key.K_LEFT), False)
             key.toggle(long(key.K_UP), False)
+            up, down, left, right, change = get_keys()
+          if predict == 1:
+            print 'Go right'
+            up, down, left, right, change = get_keys()
+            key.toggle(long(key.K_RIGHT), True)
+            key.toggle(long(key.K_UP), True)
+            key.toggle(long(key.K_RIGHT), False)
+            key.toggle(long(key.K_UP), False)
+            up, down, left, right, change = get_keys()
+          if predict == 2:
+            print 'Go forward'
+            up, down, left, right, change = get_keys()
+            key.toggle(long(key.K_UP), True)
+            time.sleep(0.05)
+            key.toggle(long(key.K_UP), False)
+            up, down, left, right, change = get_keys()
           if predict == 3:
+            print 'Go reverse'
+            up, down, left, right, change = get_keys()
             key.toggle(long(key.K_DOWN), True)
-            time.sleep(0.10)
+            time.sleep(0.05)
             key.toggle(long(key.K_DOWN), False)
+            up, down, left, right, change = get_keys()
 
 
           if change:
@@ -192,11 +235,12 @@ def interactive_control(host, port, configuration):
             except TypeError:
                 # Windows + Python 3 workaround?
               sock.sendto(bytes(configuration[command], 'utf-8'), (host, port))
-
     finally: 
       connection.close()
       server_socket.close()
 
+# Name:         make_parser()
+# Description:  Builds and returns an argument parser.
 def make_parser():
   parser = argparse.ArgumentParser(
       description='Interactive controller for the Raspberry Pi RC.'
@@ -222,6 +266,8 @@ def make_parser():
   )
   return parser
 
+# Name:         main()
+# Description:  Main function used to start the server and autopilot. 
 def main():
   parser = make_parser()
   args = parser.parse_args()
@@ -237,6 +283,6 @@ def main():
       print('Server does not appear to be listening for messages, aborting')
       return
 
-  interactive_control(args.server, args.port, configuration)
+  autopilot(args.server, args.port, configuration)
 if __name__ == '__main__':
   main()
