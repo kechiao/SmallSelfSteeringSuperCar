@@ -22,7 +22,7 @@ trainingImages = np.zeros((1,38400))
 trainingLabels = np.zeros((1,4))
 
 # Returns a list of all .npz extension files to import training data
-training_data = glob.glob('*.npz')
+training_data = glob.glob('training_data/*.npz')
 
 # Loading data, interating through all .npz files and extracting contents
 for training_set in training_data:
@@ -65,7 +65,7 @@ plt.imshow(testImage, cmap='Greys_r')
 plt.show()
 
 # Save the model
-model.save('autopilot.h5')
+model.save('models/model.h5')
 
 # Some performance statistics:
 # Note: These will likely differ depending on shuffling and batch gradients.

@@ -274,7 +274,7 @@ def interactive_control(host, port, configuration):
 
         # Saving images and labels to disk
         print 'Saving data...'
-        np.savez('test.npz', train=train, train_labels = training_labels)
+        np.savez('training_data/test.npz', train=train, train_labels = training_labels)
 
         print 'Total Frames:', total_frames
         print 'Saved Frames:', saved_frame
