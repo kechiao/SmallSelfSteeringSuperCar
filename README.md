@@ -183,6 +183,8 @@ To be continued...
 ### Future Updates
 
 In the future I hopefully plan to implement the following things:
+* Model Architecture change
+  - use a convolutional neural network
 * Proper working thresholding
   - driving on the blue tape track
 * Changes in motor speed
