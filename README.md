@@ -192,7 +192,7 @@ I wanted to just feed in a 1D vector of pixel images, to reduce dimensionality a
 
 However, there were many environmental factors that prevented the camera from doing so with reasonable success. First, sunlight that shines onto the blue tape changes the saturation and lightness of the color, so creating a threshold with just a fixed range will sometimes fail under direct sunlight illumination. Second, some of the white tile's reflection would be picked up in the threshold, which would've confused the model, seeing two sets of stripes or sometimes blotches of white.
 
-A solution I will explore will be to change the model architecutre to a convolutional neural network (CNN), which are designed to make use of convolutions to proess images with minial preprocessing.
+A solution I will explore will be to change the model architecutre to a convolutional neural network (CNN), which are designed to make use of convolutions to proess images with minimal preprocessing.
 
 ### Future Updates
 
