@@ -178,7 +178,21 @@ With the current code, I can achieve roughly 96% validation accuracy which is pr
 There are more results located in a comment block at the bottom of ```train.py```. 
 ### Problems
 
-To be continued...
+#### Original Track
+
+The original track design was blue painter's tape laid out on white tile. I taped down our living room and this seemed like a good idea at first because of the contrast between the white tile and blue outlines. The example track is shown here: 
+
+[![originaltrack](http://i.imgur.com/E0NEDSjl.jpg)](http://i.imgur.com/E0NEDSjl.jpg)
+
+This proved troublesome due to limitations of the Pi Camera and my network architecture. The main problem was properly thresholding the color image to black and white. Color images are essentially the same as grayscale images, with the exception of three color channels (RGB) instead of one. So instead of having one matrix with pixel values [0, 255], there are 3 matrices with pixel values [0,255]. 
+
+I wanted to just feed in a 1D vector of pixel images, to reduce dimensionality and complexity of the model, so thresholding the image would pick out the blue tape from the rest of the image:
+
+[![threshold](http://i.imgur.com/4G7RRXRl.png)](http://i.imgur.com/4G7RRXRl.png)
+
+However, there were many environmental factors that prevented the camera from doing so with reasonable success. First, sunlight that shines onto the blue tape changes the saturation and lightness of the color, so creating a threshold with just a fixed range will sometimes fail under direct sunlight illumination. Second, some of the white tile's reflection would be picked up in the threshold, which would've confused the model, seeing two sets of stripes or sometimes blotches of white.
+
+A solution I will explore will be to change the model architecutre to a convolutional neural network (CNN), which are designed to make use of convolutions to proess images with minial preprocessing.
 
 ### Future Updates
 
