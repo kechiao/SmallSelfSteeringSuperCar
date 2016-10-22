@@ -13,6 +13,8 @@ And a picture of the sleek Veneno modified with a stylish cardboard roof rack an
 
 If you would like to view the details behind this project, feel free to click on the "Details" section in the table of contents. There you will find a concise breakdown of how the car manages to drive itself and how amazing it actually is.
 
+Some of the GitHub markdown functions/formatting may be off. This is due to the conversion to PDF for offline view.
+
 ## Table of Contents
 
 - [Installation](#installation)
