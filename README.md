@@ -114,11 +114,11 @@ For more details and an in-depth explanation, continue reading!
 
 I wanted to do this project because I wanted to be able to apply some of the machine learning methods I've learned in school and online directly to a real world scaled down application. While the idea of a neural network being able to *learn* feature hierachies itself and apply this to new inputs is amazing, *seeing* it work blew my mind away. 
 
-Therefore, I decided to try to apply a neural network to modify an RC car to drive itself, because this not only allows me to familiarize myself with applied software and hardware integration, machine learning, and patience, but also because I love the feeling of seeing a tangible creation come to fruition. Also because self driving cars are *cool as heck*. 
+Therefore, I decided to try to apply a neural network to modify an RC car to drive itself, because this not only allows me to familiarize myself with applied software and hardware integration, machine learning, and patience, but also because I love the feeling of seeing a tangible creation come to fruition. Also because self driving cars are *awesome*. 
 
 ### Overview
 
-So how does it all work? Is it magic? No! It's machine learning! (Ok sometimes it may be magical, especially when training it, but that's not the point :-))
+So how does it all work? Is it magic? No! (Ok sometimes it may be magical, especially when training it, but that's not the point :-))
 This is the system:
 
 [![RC Car System](http://i.imgur.com/YZ6vtTz.jpg)](http://i.imgur.com/YZ6vtTz.jpg)
@@ -141,7 +141,7 @@ All jokes aside, building this contraption was very rewarding because I had to u
 
 Here comes the fun part: understanding how it works. 
 
-You and I both see the world, and in this case, the paper track, as a three dimensional object with contrasting colors  marking the edges of where the track begins and ends. However, as advanced as the computer and camera are, they cannot see such magical things. Grayscale images that the camera sees actually a matrix of real valued integers in the range [0, 255] where 0 is pure black and 255 is pure white. While this image may be obvious to us that we are about to drive off the track
+You and I see the world, and in this case, the paper track, as a three dimensional object with contrasting colors  marking the edges of where the track begins and ends. However, computers cannot see such things. Grayscale images that the camera sees actually a matrix of real valued integers in the range [0, 255] where 0 is pure black and 255 is pure white. While this image may be obvious to us that we are about to drive off the track
 
 [![Track](http://i.imgur.com/zFCNGGQm.png)](http://i.imgur.com/zFCNGGQm.png)
 
